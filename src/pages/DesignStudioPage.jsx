@@ -361,7 +361,16 @@ const DesignStudioPage = () => {
                 Design Another
               </button>
               <button
-                onClick={() => window.open(`http://localhost:8000/download/${results.pdf_report}`, '_blank')}
+                onClick={() => {
+                  const rootBaseUrl = api.defaults.baseURL.replace(/\/api\/v1$/, '');
+                  const downloadUrl = `${rootBaseUrl}/download/${results.pdf_report}`;
+                  const link = document.createElement('a');
+                  link.href = downloadUrl;
+                  link.setAttribute('download', results.pdf_report);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
                 className="bg-gold text-black font-bold py-3 rounded-xl px-8 hover:opacity-90 transition-opacity shadow-[0_0_15px_rgba(212,175,55,0.3)]"
               >
                 Download PDF Blueprint
