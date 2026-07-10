@@ -9,10 +9,17 @@ const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const [error, setError] = useState('');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await login(email, password);
-    navigate('/dashboard');
+    setError('');
+    try {
+      await login(email, password);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Invalid email or password. Please try again.');
+    }
   };
 
   return (
@@ -23,6 +30,13 @@ const LoginPage = () => {
         className="glass-panel p-10 rounded-3xl w-full max-w-md border border-white/10"
       >
         <h2 className="text-3xl font-display font-bold mb-6 text-center">Welcome Back</h2>
+        
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label className="block text-sm text-gray-soft mb-1">Email</label>
