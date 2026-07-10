@@ -135,12 +135,12 @@ const DashboardPage = () => {
         <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} />
       )}
 
-      <div className="flex justify-between items-center mb-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
         <div>
-          <h1 className="text-4xl font-display font-bold mb-2">Welcome Back, {user?.name || 'Designer'}</h1>
-          <p className="text-gray-soft">Here's what's happening with your projects today.</p>
+          <h1 className="text-3xl sm:text-4xl font-display font-bold mb-2">Welcome Back, {user?.name || 'Designer'}</h1>
+          <p className="text-gray-soft text-sm sm:text-base">Here's what's happening with your projects today.</p>
         </div>
-        <Link to="/studio" className="bg-gold text-primary px-6 py-3 rounded-full font-semibold flex items-center gap-2 hover:bg-gold-light transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)]">
+        <Link to="/studio" className="bg-gold text-primary px-6 py-3 rounded-full font-semibold flex items-center gap-2 hover:bg-gold-light transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)] w-full sm:w-auto justify-center">
           <Plus className="w-5 h-5" />
           New Project
         </Link>
