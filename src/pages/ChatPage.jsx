@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Send } from 'lucide-react';
 
+import api from '../api/axios';
+
 const ChatPage = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -16,8 +18,8 @@ const ChatPage = () => {
     setLoading(true);
 
     try {
-      // Connecting to the FastAPI Streaming endpoint we built
-      const response = await fetch(`http://localhost:8000/api/v1/chat/stream?prompt=${encodeURIComponent(userMsg.content)}`);
+      // Connecting to the FastAPI Streaming endpoint dynamically
+      const response = await fetch(`${api.defaults.baseURL}/chat/stream?prompt=${encodeURIComponent(userMsg.content)}`);
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       
