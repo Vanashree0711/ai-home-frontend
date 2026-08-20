@@ -3,44 +3,83 @@ import { useLocation } from 'react-router-dom';
 import api from '../api/axios';
 import { RefreshCw } from 'lucide-react';
 
-const ImageWithRetry = ({ src, alt, className, style, delayMs = 0 }) => {
-  const [currentSrc, setCurrentSrc] = useState('');
-  const [retries, setRetries] = useState(0);
+const ImageWithRetry = ({ src, alt, className, style }) => {
+  const [currentSrc, setCurrentSrc] = useState(src);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     setLoaded(false);
-    setRetries(0);
-    const timer = setTimeout(() => setCurrentSrc(src), delayMs);
-    return () => clearTimeout(timer);
-  }, [src, delayMs]);
+    setError(false);
+    setAttempt(0);
+    setCurrentSrc(src);
+  }, [src]);
+
+  const handleRetry = () => {
+    setError(false);
+    setLoaded(false);
+    const nextAttempt = attempt + 1;
+    setAttempt(nextAttempt);
+    const sep = src.includes('?') ? '&' : '?';
+    setCurrentSrc(`${src}${sep}retry=${nextAttempt}&t=${Date.now()}`);
+  };
+
+  useEffect(() => {
+    let timeoutId;
+    if (!loaded && !error) {
+      timeoutId = setTimeout(() => {
+        if (!loaded) {
+          if (attempt < 3) {
+            handleRetry();
+          } else {
+            setError(true);
+          }
+        }
+      }, 15000);
+    }
+    return () => clearTimeout(timeoutId);
+  }, [currentSrc, loaded, error, attempt]);
 
   return (
-    <>
-      {!loaded && (
-        <div className={`${className} animate-pulse bg-white/5 flex items-center justify-center`} style={style}>
-          <span className="text-white/30 text-sm font-medium tracking-widest uppercase">Rendering...</span>
+    <div className={`relative ${className || ''}`} style={style}>
+      {!loaded && !error && (
+        <div className="absolute inset-0 bg-white/5 animate-pulse flex flex-col items-center justify-center p-6 text-center z-0">
+          <RefreshCw className="w-8 h-8 text-gold animate-spin mb-3 opacity-60" />
+          <span className="text-white/80 text-xs font-semibold tracking-wider uppercase">Synthesizing Architectural Render...</span>
+          <span className="text-white/40 text-[10px] mt-1">Applying high-resolution materials & lighting</span>
         </div>
       )}
-      {currentSrc && (
-        <img
-          src={currentSrc}
-          alt={alt}
-          className={`${className} ${loaded ? 'block' : 'hidden'}`}
-          style={style}
-          onLoad={() => setLoaded(true)}
-          onError={() => {
-            if (retries < 10) {
-              setTimeout(() => {
-                const separator = src.includes('?') ? '&' : '?';
-                setCurrentSrc(`${src}${separator}retry=${retries}`);
-                setRetries(r => r + 1);
-              }, 2000 + (Math.random() * 2000));
-            }
-          }}
-        />
+      {error && (
+        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-6 text-center z-10">
+          <p className="text-white/70 text-xs mb-3">Render timeout or network delay.</p>
+          <button
+            onClick={handleRetry}
+            className="bg-gold/20 hover:bg-gold/30 text-gold border border-gold/40 text-xs px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-semibold"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Reload Render
+          </button>
+        </div>
       )}
-    </>
+      <img
+        src={currentSrc}
+        alt={alt}
+        className={`${className || ''} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        style={style}
+        onLoad={() => {
+          setLoaded(true);
+          setError(false);
+        }}
+        onError={() => {
+          if (attempt < 3) {
+            setTimeout(handleRetry, 2000);
+          } else {
+            setError(true);
+          }
+        }}
+      />
+    </div>
   );
 };
 
@@ -382,7 +421,7 @@ const DesignStudioPage = () => {
                     {regenerating === 'exterior' ? 'Regenerating...' : 'Regenerate'}
                   </button>
                 </div>
-                <ImageWithRetry src={results.exterior_image} alt="Exterior" className="w-full h-72 object-cover" delayMs={0} />
+                <ImageWithRetry src={results.exterior_image} alt="Exterior" className="w-full h-72 object-cover" />
               </div>
 
               {/* Interior */}
@@ -399,7 +438,7 @@ const DesignStudioPage = () => {
                     {regenerating === 'interior' ? 'Regenerating...' : 'Regenerate'}
                   </button>
                 </div>
-                <ImageWithRetry src={results.interior_image} alt="Interior" className="w-full h-72 object-cover" delayMs={400} />
+                <ImageWithRetry src={results.interior_image} alt="Interior" className="w-full h-72 object-cover" />
               </div>
 
               {/* 3D View */}
@@ -421,7 +460,6 @@ const DesignStudioPage = () => {
                   alt="3D View"
                   className="rounded-b-2xl"
                   style={{ width: '100%', height: 'auto', display: 'block' }}
-                  delayMs={800}
                 />
               </div>
             </div>
