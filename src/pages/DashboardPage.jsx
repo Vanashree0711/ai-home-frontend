@@ -1,9 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Image as ImageIcon, MessageSquare, Plus, X, Download } from 'lucide-react';
+import { Activity, Image as ImageIcon, MessageSquare, Plus, X, Download, Upload } from 'lucide-react';
 import api from '../api/axios';
 
 const STORAGE_KEY = 'ai_home_projects';
+
+// Export all projects as a JSON backup file
+const exportProjects = (projects) => {
+  const dataStr = JSON.stringify(projects, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ai_home_projects_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// Import projects from a JSON backup file
+const importProjects = (file, existing, onDone) => {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      // Merge: avoid duplicates by id
+      const existingIds = new Set(existing.map(p => p.id));
+      const newOnes = imported.filter(p => !existingIds.has(p.id));
+      const merged = [...newOnes, ...existing].slice(0, 50);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      onDone(merged);
+      alert(`✅ Successfully imported ${newOnes.length} new project(s)!`);
+    } catch {
+      alert('❌ Invalid backup file. Please use a file exported from this app.');
+    }
+  };
+  reader.readAsText(file);
+};
 
 const StatCard = ({ title, value, icon: Icon }) => (
   <div className="glass-panel p-6 rounded-2xl flex items-center justify-between hover:scale-[1.02] transition-transform duration-200">
@@ -110,6 +143,7 @@ const ProjectModal = ({ project, onClose }) => {
 const DashboardPage = () => {
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
+  const importRef = useRef(null);
 
   // Load projects from localStorage on mount
   useEffect(() => {
@@ -131,7 +165,21 @@ const DashboardPage = () => {
         <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} />
       )}
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
+      {/* Hidden file input for import */}
+      <input
+        type="file"
+        accept=".json"
+        ref={importRef}
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files[0]) {
+            importProjects(e.target.files[0], projects, setProjects);
+            e.target.value = '';
+          }
+        }}
+      />
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl sm:text-4xl font-display font-bold mb-2">My Design Studio</h1>
           <p className="text-gray-soft text-sm sm:text-base">All your generated designs — saved on this device.</p>
@@ -143,6 +191,28 @@ const DashboardPage = () => {
           <Plus className="w-5 h-5" />
           New Project
         </Link>
+      </div>
+
+      {/* Backup / Restore Row */}
+      <div className="flex gap-3 mb-8 flex-wrap">
+        <button
+          onClick={() => exportProjects(projects)}
+          disabled={projects.length === 0}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/20 text-sm text-pearl hover:bg-white/5 transition-colors disabled:opacity-40"
+        >
+          <Download className="w-4 h-4 text-gold" />
+          Backup Projects
+        </button>
+        <button
+          onClick={() => importRef.current?.click()}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/20 text-sm text-pearl hover:bg-white/5 transition-colors"
+        >
+          <Upload className="w-4 h-4 text-gold" />
+          Restore from Backup
+        </button>
+        <span className="text-gray-soft text-xs self-center ml-1">
+          💡 Use Backup to save your projects and Restore to load them on any device
+        </span>
       </div>
 
       {/* Stats */}
