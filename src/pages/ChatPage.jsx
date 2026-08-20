@@ -22,25 +22,21 @@ const ChatPage = () => {
     setMessages(prev => [...prev, assistantMsg]);
 
     try {
-      // Call Pollinations directly from the browser - avoids server rate limits
-      const response = await fetch('https://text.pollinations.ai/openai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'openai-large',
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            ...messages,
-            userMsg
-          ],
-          stream: true
-        })
-      });
+      // Build full conversation context
+      const conversationContext = messages
+        .map(m => `${m.role === 'user' ? 'User' : 'AI Architect'}: ${m.content}`)
+        .join('\n');
+
+      const fullPrompt = `You are an expert AI Architect and Interior Designer. Answer this question professionally and in detail.\n\n${conversationContext ? `Previous conversation:\n${conversationContext}\n\n` : ''}User: ${userMsg.content}\n\nAI Architect:`;
+
+      // Use simple GET endpoint - works from browser without CORS issues
+      const encodedPrompt = encodeURIComponent(fullPrompt);
+      const url = `https://text.pollinations.ai/${encodedPrompt}?model=openai&seed=${Math.floor(Math.random() * 100000)}`;
+
+      const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        throw new Error(`API responded with status ${response.status}`);
       }
 
       const reader = response.body.getReader();
@@ -50,30 +46,13 @@ const ChatPage = () => {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6).trim();
-            if (dataStr === '[DONE]') break;
-            try {
-              const data = JSON.parse(dataStr);
-              const content = data?.choices?.[0]?.delta?.content || '';
-              if (content) {
-                fullContent += content;
-                setMessages(prev => {
-                  const newMsgs = [...prev];
-                  newMsgs[newMsgs.length - 1] = { role: 'assistant', content: fullContent };
-                  return newMsgs;
-                });
-              }
-            } catch (e) {
-              // Ignore partial JSON chunks
-            }
-          }
-        }
+        fullContent += chunk;
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          newMsgs[newMsgs.length - 1] = { role: 'assistant', content: fullContent };
+          return newMsgs;
+        });
       }
     } catch (error) {
       console.error('Chat error:', error);
