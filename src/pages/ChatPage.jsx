@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Send } from 'lucide-react';
 
-import api from '../api/axios';
+const SYSTEM_PROMPT = "You are an expert AI Architect and Interior Designer with 20 years of experience. Provide concise, professional, highly detailed, and creative advice on home design, building materials, structural engineering, interior layout, and architecture. Always give practical, specific recommendations. Be helpful and thorough.";
 
 const ChatPage = () => {
   const [messages, setMessages] = useState([]);
@@ -11,43 +11,63 @@ const ChatPage = () => {
   const bottomRef = useRef(null);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
     const userMsg = { role: 'user', content: input };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
 
+    // Add empty assistant message to stream into
+    const assistantMsg = { role: 'assistant', content: '' };
+    setMessages(prev => [...prev, assistantMsg]);
+
     try {
-      // Connecting to the FastAPI Streaming endpoint dynamically
-      const response = await fetch(`${api.defaults.baseURL}/chat/stream?prompt=${encodeURIComponent(userMsg.content)}`);
+      // Call Pollinations directly from the browser - avoids server rate limits
+      const response = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'openai-large',
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            ...messages,
+            userMsg
+          ],
+          stream: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
-      
-      let assistantMsg = { role: 'assistant', content: '' };
-      setMessages(prev => [...prev, assistantMsg]);
+      let fullContent = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n');
-        
+
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6);
+            const dataStr = line.slice(6).trim();
             if (dataStr === '[DONE]') break;
-            
             try {
               const data = JSON.parse(dataStr);
-              if (data.text) {
-                assistantMsg.content += data.text;
+              const content = data?.choices?.[0]?.delta?.content || '';
+              if (content) {
+                fullContent += content;
                 setMessages(prev => {
                   const newMsgs = [...prev];
-                  newMsgs[newMsgs.length - 1] = { ...assistantMsg };
+                  newMsgs[newMsgs.length - 1] = { role: 'assistant', content: fullContent };
                   return newMsgs;
                 });
-              } else if (data.error) {
-                console.error("AI Error:", data.error);
               }
             } catch (e) {
               // Ignore partial JSON chunks
@@ -56,8 +76,17 @@ const ChatPage = () => {
         }
       }
     } catch (error) {
-      console.error("Chat stream error:", error);
+      console.error('Chat error:', error);
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        newMsgs[newMsgs.length - 1] = {
+          role: 'assistant',
+          content: 'Sorry, the AI is temporarily busy. Please wait a moment and try again!'
+        };
+        return newMsgs;
+      });
     }
+
     setLoading(false);
   };
 
@@ -71,6 +100,11 @@ const ChatPage = () => {
       
       <div className="flex-1 glass-panel rounded-3xl border border-white/10 p-6 flex flex-col overflow-hidden mb-4 h-[600px]">
         <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-2">
+          {messages.length === 0 && (
+            <div className="text-gray-soft text-sm text-center mt-8">
+              👋 Ask me anything about home design, materials, costs, or architecture!
+            </div>
+          )}
           {messages.map((msg, i) => (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -82,7 +116,7 @@ const ChatPage = () => {
             </motion.div>
           ))}
           {loading && (
-            <div className="text-gray-soft text-sm animate-pulse ml-2">AI is thinking...</div>
+            <div className="text-gray-soft text-sm animate-pulse ml-2">AI Architect is thinking...</div>
           )}
           <div ref={bottomRef} />
         </div>
@@ -96,8 +130,13 @@ const ChatPage = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          disabled={loading}
         />
-        <button onClick={sendMessage} className="bg-gold text-primary p-4 rounded-xl hover:bg-gold-light transition-colors">
+        <button 
+          onClick={sendMessage} 
+          disabled={loading}
+          className="bg-gold text-primary p-4 rounded-xl hover:bg-gold-light transition-colors disabled:opacity-50"
+        >
           <Send className="w-6 h-6" />
         </button>
       </div>
