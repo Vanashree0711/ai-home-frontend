@@ -30,7 +30,8 @@ const ImageWithRetry = ({ src, alt, className, style, delayMs = 0 }) => {
           onError={() => {
             if (retries < 10) {
               setTimeout(() => {
-                setCurrentSrc(`${src}&retry=${retries}`);
+                const separator = src.includes('?') ? '&' : '?';
+                setCurrentSrc(`${src}${separator}retry=${retries}`);
                 setRetries(r => r + 1);
               }, 2000 + (Math.random() * 2000));
             }
@@ -87,8 +88,29 @@ const DesignStudioPage = () => {
         style: style,
         prompt: customPrompt.trim()
       });
-      setResults(response.data);
+      const data = response.data;
+      setResults(data);
       setStep(4);
+
+      // Save project to localStorage so it appears on the Dashboard
+      const project = {
+        id: `proj_${Date.now()}`,
+        name: `${style} Home - ${plotSize} sqft`,
+        description: customPrompt.trim(),
+        style: style,
+        plot_size: parseInt(plotSize),
+        budget: parseInt(budget),
+        exterior_image: data.exterior_image,
+        interior_image: data.interior_image,
+        floorplan_image: data.floorplan_image,
+        analysis: data.analysis,
+        pdf_report: data.pdf_report,
+        created_at: new Date().toISOString()
+      };
+      const existing = JSON.parse(localStorage.getItem('ai_home_projects') || '[]');
+      const updated = [project, ...existing].slice(0, 50); // keep max 50 projects
+      localStorage.setItem('ai_home_projects', JSON.stringify(updated));
+
     } catch (err) {
       let errorMsg = 'An error occurred during generation.';
       if (err.response?.data?.detail) {
