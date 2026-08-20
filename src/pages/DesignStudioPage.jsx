@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../api/axios';
+import { RefreshCw } from 'lucide-react';
 
 const ImageWithRetry = ({ src, alt, className, style, delayMs = 0 }) => {
   const [currentSrc, setCurrentSrc] = useState('');
@@ -9,6 +10,7 @@ const ImageWithRetry = ({ src, alt, className, style, delayMs = 0 }) => {
 
   useEffect(() => {
     setLoaded(false);
+    setRetries(0);
     const timer = setTimeout(() => setCurrentSrc(src), delayMs);
     return () => clearTimeout(timer);
   }, [src, delayMs]);
@@ -54,6 +56,7 @@ const DesignStudioPage = () => {
   const [customPrompt, setCustomPrompt] = useState('');
   const [error, setError] = useState('');
   const [results, setResults] = useState(null);
+  const [regenerating, setRegenerating] = useState(null); // 'exterior' | 'interior' | '3d' | null
 
   useEffect(() => {
     if (preloadedProject) {
@@ -105,10 +108,12 @@ const DesignStudioPage = () => {
         floorplan_image: data.floorplan_image,
         analysis: data.analysis,
         pdf_report: data.pdf_report,
+        design_spec: data.design_spec,
+        master_seed: data.master_seed,
         created_at: new Date().toISOString()
       };
       const existing = JSON.parse(localStorage.getItem('ai_home_projects') || '[]');
-      const updated = [project, ...existing].slice(0, 50); // keep max 50 projects
+      const updated = [project, ...existing].slice(0, 50);
       localStorage.setItem('ai_home_projects', JSON.stringify(updated));
 
     } catch (err) {
@@ -296,36 +301,124 @@ const DesignStudioPage = () => {
         )}
 
         {/* Step 4: Results */}
-        {step === 4 && results && (
+        {step === 4 && results && (() => {
+          const spec = results.design_spec;
+          const house = spec?.house;
+          const ext = spec?.exterior;
+          const interior = spec?.interior;
+
+          const handleRegenerate = async (imageType) => {
+            if (!spec) return;
+            setRegenerating(imageType);
+            try {
+              const response = await api.post('/engine/regenerate', {
+                image_type: imageType,
+                spec: spec
+              });
+              const newUrl = response.data.image_url;
+              setResults(prev => ({
+                ...prev,
+                ...(imageType === 'exterior' ? { exterior_image: newUrl } : {}),
+                ...(imageType === 'interior' ? { interior_image: newUrl } : {}),
+                ...(imageType === '3d' ? { floorplan_image: newUrl } : {}),
+              }));
+              // Update localStorage too
+              const projects = JSON.parse(localStorage.getItem('ai_home_projects') || '[]');
+              if (projects.length > 0) {
+                const key = imageType === 'exterior' ? 'exterior_image' : imageType === 'interior' ? 'interior_image' : 'floorplan_image';
+                projects[0][key] = newUrl;
+                localStorage.setItem('ai_home_projects', JSON.stringify(projects));
+              }
+            } catch (err) {
+              console.error('Regeneration error:', err);
+            }
+            setRegenerating(null);
+          };
+
+          return (
           <div className="flex flex-col gap-8">
             <div className="text-center mb-4">
               <h2 className="text-4xl font-display font-bold text-gold mb-3">Your AI Masterpiece</h2>
-              <p className="text-gray-soft text-lg max-w-2xl mx-auto">Your dream home has been architected. Here are your bespoke designs and cost analysis.</p>
+              <p className="text-gray-soft text-lg max-w-2xl mx-auto">Your dream home has been architected. All three views represent the same house design.</p>
             </div>
 
-            {/* Image Grid */}
+            {/* Design Spec Summary */}
+            {spec && (
+              <div className="glass-panel p-6 rounded-2xl border border-gold/20 mb-2">
+                <h3 className="text-gold font-bold text-sm uppercase tracking-widest mb-4">🏛️ Design Specification</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div><span className="text-gray-soft">Style</span><p className="text-white font-medium">{house?.architectural_style}</p></div>
+                  <div><span className="text-gray-soft">Floors</span><p className="text-white font-medium">{house?.floors}-Storey</p></div>
+                  <div><span className="text-gray-soft">Bedrooms</span><p className="text-white font-medium">{interior?.bedrooms}</p></div>
+                  <div><span className="text-gray-soft">Bathrooms</span><p className="text-white font-medium">{interior?.bathrooms}</p></div>
+                  <div><span className="text-gray-soft">Primary Color</span><p className="text-white font-medium capitalize">{ext?.primary_color}</p></div>
+                  <div><span className="text-gray-soft">Accent</span><p className="text-white font-medium capitalize">{ext?.secondary_color}</p></div>
+                  <div><span className="text-gray-soft">Flooring</span><p className="text-white font-medium capitalize">{interior?.flooring}</p></div>
+                  <div><span className="text-gray-soft">Roof</span><p className="text-white font-medium capitalize">{ext?.roof}</p></div>
+                </div>
+                {ext?.materials?.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {ext.materials.map((mat, i) => (
+                      <span key={i} className="bg-white/5 border border-white/10 text-white/80 text-xs px-3 py-1 rounded-full">{mat}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Image Grid with Regenerate Buttons */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Exterior */}
               <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative bg-black/50">
-                <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/80 to-transparent p-4 z-10">
+                <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/80 to-transparent p-4 z-10 flex justify-between items-center">
                   <h3 className="text-white font-bold tracking-widest uppercase text-sm">🏠 Exterior Concept</h3>
+                  <button
+                    onClick={() => handleRegenerate('exterior')}
+                    disabled={!!regenerating}
+                    className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                    title="Regenerate exterior with same design"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${regenerating === 'exterior' ? 'animate-spin' : ''}`} />
+                    {regenerating === 'exterior' ? 'Regenerating...' : 'Regenerate'}
+                  </button>
                 </div>
                 <ImageWithRetry src={results.exterior_image} alt="Exterior" className="w-full h-72 object-cover" delayMs={0} />
               </div>
 
+              {/* Interior */}
               <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative bg-black/50">
-                <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/80 to-transparent p-4 z-10">
+                <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/80 to-transparent p-4 z-10 flex justify-between items-center">
                   <h3 className="text-white font-bold tracking-widest uppercase text-sm">🛋️ Interior Concept</h3>
+                  <button
+                    onClick={() => handleRegenerate('interior')}
+                    disabled={!!regenerating}
+                    className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                    title="Regenerate interior with same design"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${regenerating === 'interior' ? 'animate-spin' : ''}`} />
+                    {regenerating === 'interior' ? 'Regenerating...' : 'Regenerate'}
+                  </button>
                 </div>
                 <ImageWithRetry src={results.interior_image} alt="Interior" className="w-full h-72 object-cover" delayMs={400} />
               </div>
 
+              {/* 3D View */}
               <div className="rounded-2xl border border-white/10 shadow-2xl bg-black/50 md:col-span-2">
-                <div className="p-4">
-                  <h3 className="text-white font-bold tracking-widest uppercase text-sm">📐 Photorealistic 3D Layout</h3>
+                <div className="p-4 flex justify-between items-center">
+                  <h3 className="text-white font-bold tracking-widest uppercase text-sm">📐 3D Architectural View</h3>
+                  <button
+                    onClick={() => handleRegenerate('3d')}
+                    disabled={!!regenerating}
+                    className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                    title="Regenerate 3D view with same design"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${regenerating === '3d' ? 'animate-spin' : ''}`} />
+                    {regenerating === '3d' ? 'Regenerating...' : 'Regenerate'}
+                  </button>
                 </div>
                 <ImageWithRetry
                   src={results.floorplan_image}
-                  alt="Floorplan"
+                  alt="3D View"
                   className="rounded-b-2xl"
                   style={{ width: '100%', height: 'auto', display: 'block' }}
                   delayMs={800}
@@ -399,7 +492,8 @@ const DesignStudioPage = () => {
               </button>
             </div>
           </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );
