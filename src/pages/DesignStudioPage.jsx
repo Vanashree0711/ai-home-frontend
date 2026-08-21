@@ -250,27 +250,26 @@ const DesignStudioPage = () => {
         {step === 1 && (
           <div className="flex flex-col gap-8 py-4">
             <h2 className="text-3xl font-display font-bold mb-2 text-gold">Property Details</h2>
-            <p className="text-gray-soft text-sm -mt-4">All fields are optional — defaults will be applied automatically.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <label className="block text-base font-medium text-gray-soft mb-2">Plot Size (sq ft) <span className="text-white/30 text-xs">(optional)</span></label>
+                <label className="block text-base font-medium text-gray-soft mb-2">Plot Size (sq ft)</label>
                 <input
                   type="number"
                   value={plotSize}
                   onChange={(e) => setPlotSize(e.target.value)}
                   className="w-full bg-white/5 border border-white/20 rounded-2xl px-6 py-4.5 text-lg focus:border-gold focus:outline-none text-white placeholder-white/20 transition-all focus:bg-white/10"
-                  placeholder="Default: 2500 sqft"
+                  placeholder="e.g. 2500"
                   style={{ fontSize: '1.125rem', padding: '1.125rem 1.5rem' }}
                 />
               </div>
               <div>
-                <label className="block text-base font-medium text-gray-soft mb-2">Budget ($) <span className="text-white/30 text-xs">(optional)</span></label>
+                <label className="block text-base font-medium text-gray-soft mb-2">Budget ($)</label>
                 <input
                   type="number"
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
                   className="w-full bg-white/5 border border-white/20 rounded-2xl px-6 py-4.5 text-lg focus:border-gold focus:outline-none text-white placeholder-white/20 transition-all focus:bg-white/10"
-                  placeholder="Default: $150,000"
+                  placeholder="e.g. 150000"
                   style={{ fontSize: '1.125rem', padding: '1.125rem 1.5rem' }}
                 />
               </div>
@@ -278,11 +277,14 @@ const DesignStudioPage = () => {
             <button
               onClick={() => {
                 setError('');
-                // Apply smart defaults if left blank — never block the user
-                const finalPlot = plotSize && parseInt(plotSize) > 0 ? plotSize : '2500';
-                const finalBudget = budget && parseInt(budget) > 0 ? budget : '150000';
-                setPlotSize(finalPlot);
-                setBudget(finalBudget);
+                if (!plotSize || parseInt(plotSize) <= 0) {
+                  setError('Plot Size must be a valid number greater than 0.');
+                  return;
+                }
+                if (!budget || parseInt(budget) <= 0) {
+                  setError('Budget must be a valid number greater than 0.');
+                  return;
+                }
                 setStep(2);
               }}
               className="bg-gold text-black font-bold py-4 px-10 rounded-2xl mt-6 self-end hover:bg-gold-light transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)] text-lg"
