@@ -481,7 +481,7 @@ const DesignStudioPage = () => {
               {/* 3D View */}
               <div className="rounded-2xl border border-white/10 shadow-2xl bg-black/50 md:col-span-2">
                 <div className="p-4 flex justify-between items-center">
-                  <h3 className="text-white font-bold tracking-widest uppercase text-sm">📐 3D Interior Floor Plan</h3>
+                  <h3 className="text-white font-bold tracking-widest uppercase text-sm">🏠 3D Isometric Dollhouse Floor Plan</h3>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => downloadHDImage(results.floorplan_image, '3D-Layout-2K-HD.jpg')}
