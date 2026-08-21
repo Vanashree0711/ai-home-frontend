@@ -1,7 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../api/axios';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Download, ExternalLink } from 'lucide-react';
+
+const downloadHDImage = async (url, filename) => {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (e) {
+    window.open(url, '_blank');
+  }
+};
 
 const ImageWithRetry = ({ src, alt, className, style }) => {
   const [currentSrc, setCurrentSrc] = useState(src);
@@ -405,21 +422,31 @@ const DesignStudioPage = () => {
               </div>
             )}
 
-            {/* Image Grid with Regenerate Buttons */}
+            {/* Image Grid with Regenerate & 2K HD Download Buttons */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Exterior */}
               <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative bg-black/50">
                 <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/80 to-transparent p-4 z-10 flex justify-between items-center">
                   <h3 className="text-white font-bold tracking-widest uppercase text-sm">🏠 Exterior Concept</h3>
-                  <button
-                    onClick={() => handleRegenerate('exterior')}
-                    disabled={!!regenerating}
-                    className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                    title="Regenerate exterior with same design"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${regenerating === 'exterior' ? 'animate-spin' : ''}`} />
-                    {regenerating === 'exterior' ? 'Regenerating...' : 'Regenerate'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => downloadHDImage(results.exterior_image, 'Exterior-2K-HD.jpg')}
+                      className="bg-white/10 hover:bg-white/20 text-white text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-colors"
+                      title="Download 2K HD Image"
+                    >
+                      <Download className="w-3.5 h-3.5 text-gold" />
+                      <span className="font-semibold">2K HD</span>
+                    </button>
+                    <button
+                      onClick={() => handleRegenerate('exterior')}
+                      disabled={!!regenerating}
+                      className="bg-white/10 hover:bg-white/20 text-white text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-colors disabled:opacity-50"
+                      title="Regenerate exterior with same design"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${regenerating === 'exterior' ? 'animate-spin' : ''}`} />
+                      {regenerating === 'exterior' ? 'Regenerating...' : 'Regenerate'}
+                    </button>
+                  </div>
                 </div>
                 <ImageWithRetry src={results.exterior_image} alt="Exterior" className="w-full h-72 object-cover" />
               </div>
@@ -428,15 +455,25 @@ const DesignStudioPage = () => {
               <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative bg-black/50">
                 <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/80 to-transparent p-4 z-10 flex justify-between items-center">
                   <h3 className="text-white font-bold tracking-widest uppercase text-sm">🛋️ Interior Concept</h3>
-                  <button
-                    onClick={() => handleRegenerate('interior')}
-                    disabled={!!regenerating}
-                    className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                    title="Regenerate interior with same design"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${regenerating === 'interior' ? 'animate-spin' : ''}`} />
-                    {regenerating === 'interior' ? 'Regenerating...' : 'Regenerate'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => downloadHDImage(results.interior_image, 'Interior-2K-HD.jpg')}
+                      className="bg-white/10 hover:bg-white/20 text-white text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-colors"
+                      title="Download 2K HD Image"
+                    >
+                      <Download className="w-3.5 h-3.5 text-gold" />
+                      <span className="font-semibold">2K HD</span>
+                    </button>
+                    <button
+                      onClick={() => handleRegenerate('interior')}
+                      disabled={!!regenerating}
+                      className="bg-white/10 hover:bg-white/20 text-white text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-colors disabled:opacity-50"
+                      title="Regenerate interior with same design"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${regenerating === 'interior' ? 'animate-spin' : ''}`} />
+                      {regenerating === 'interior' ? 'Regenerating...' : 'Regenerate'}
+                    </button>
+                  </div>
                 </div>
                 <ImageWithRetry src={results.interior_image} alt="Interior" className="w-full h-72 object-cover" />
               </div>
@@ -445,15 +482,25 @@ const DesignStudioPage = () => {
               <div className="rounded-2xl border border-white/10 shadow-2xl bg-black/50 md:col-span-2">
                 <div className="p-4 flex justify-between items-center">
                   <h3 className="text-white font-bold tracking-widest uppercase text-sm">📐 Photorealistic 3D Layout</h3>
-                  <button
-                    onClick={() => handleRegenerate('3d')}
-                    disabled={!!regenerating}
-                    className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                    title="Regenerate 3D view with same design"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${regenerating === '3d' ? 'animate-spin' : ''}`} />
-                    {regenerating === '3d' ? 'Regenerating...' : 'Regenerate'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => downloadHDImage(results.floorplan_image, '3D-Layout-2K-HD.jpg')}
+                      className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+                      title="Download 2K HD 3D Layout"
+                    >
+                      <Download className="w-3.5 h-3.5 text-gold" />
+                      <span className="font-semibold">Download 2K HD</span>
+                    </button>
+                    <button
+                      onClick={() => handleRegenerate('3d')}
+                      disabled={!!regenerating}
+                      className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                      title="Regenerate 3D view with same design"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${regenerating === '3d' ? 'animate-spin' : ''}`} />
+                      {regenerating === '3d' ? 'Regenerating...' : 'Regenerate'}
+                    </button>
+                  </div>
                 </div>
                 <ImageWithRetry
                   src={results.floorplan_image}
