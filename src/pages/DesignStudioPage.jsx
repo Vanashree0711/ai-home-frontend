@@ -502,12 +502,14 @@ const DesignStudioPage = () => {
                     </button>
                   </div>
                 </div>
-                <ImageWithRetry
-                  src={results.floorplan_image}
-                  alt="3D View"
-                  className="rounded-b-2xl"
-                  style={{ width: '100%', height: 'auto', display: 'block' }}
-                />
+                <div className="flex justify-center bg-black/40 p-4 rounded-b-2xl">
+                  <ImageWithRetry
+                    src={results.floorplan_image}
+                    alt="3D View"
+                    className="rounded-xl max-h-[650px] object-contain shadow-2xl"
+                    style={{ width: 'auto', maxHeight: '650px', display: 'block' }}
+                  />
+                </div>
               </div>
             </div>
 
