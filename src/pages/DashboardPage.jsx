@@ -193,27 +193,6 @@ const DashboardPage = () => {
         </Link>
       </div>
 
-      {/* Backup / Restore Row */}
-      <div className="flex gap-3 mb-8 flex-wrap">
-        <button
-          onClick={() => exportProjects(projects)}
-          disabled={projects.length === 0}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/20 text-sm text-pearl hover:bg-white/5 transition-colors disabled:opacity-40"
-        >
-          <Download className="w-4 h-4 text-gold" />
-          Backup Projects
-        </button>
-        <button
-          onClick={() => importRef.current?.click()}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/20 text-sm text-pearl hover:bg-white/5 transition-colors"
-        >
-          <Upload className="w-4 h-4 text-gold" />
-          Restore from Backup
-        </button>
-        <span className="text-gray-soft text-xs self-center ml-1">
-          💡 Use Backup to save your projects and Restore to load them on any device
-        </span>
-      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
